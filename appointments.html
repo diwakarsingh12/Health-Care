@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Appointments</title>
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family: Arial;
+  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+}
+
+/* 🔥 WIDER SCREEN */
+.container {
+  width:100%;
+  max-width:1500px;
+}
+
+.card {
+  backdrop-filter: blur(12px);
+  background: rgba(255,255,255,0.08);
+  padding:25px;
+  border-radius:20px;
+}
+
+/* ✅ ONE LINE */
+.row {
+  display:flex;
+  flex-wrap:nowrap;
+  gap:8px;
+  justify-content:center;
+  align-items:center;
+  margin-bottom:15px;
+}
+
+/* 🔥 FIT EVERYTHING */
+.row input, select {
+  width:120px;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+}
+
+/* 🔥 SUGGEST BOX */
+.suggestions {
+  position:absolute;
+  background:#222;
+  width:120px;
+  border-radius:8px;
+  z-index:100;
+}
+
+.suggestions div {
+  padding:8px;
+  cursor:pointer;
+}
+
+.suggestions div:hover {
+  background:#444;
+}
+
+/* 🔥 BUTTON FIT */
+button {
+  padding:10px 12px;
+  border:none;
+  border-radius:10px;
+  background: rgba(255,255,255,0.1);
+  color:white;
+  cursor:pointer;
+}
+
+button:hover {
+  transform:translateY(-3px);
+  background: rgba(255,255,255,0.2);
+}
+
+table {
+  width:100%;
+  margin-top:15px;
+  border-collapse:collapse;
+}
+
+th, td {
+  padding:10px;
+  border-bottom:1px solid rgba(255,255,255,0.2);
+  text-align:center;
+}
+
+.no-data {
+  text-align:center;
+  margin-top:15px;
+}
+
+h2 {
+  text-align:center;
+  margin-bottom:15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>Appointment Management</h2>
+
+<div class="card">
+
+<div class="row">
+  <input id="name" placeholder="Patient Name">
+  <input id="age" type="number" placeholder="Age">
+
+  <select id="gender">
+    <option value="">Gender</option>
+    <option>Male</option>
+    <option>Female</option>
+  </select>
+
+  <input id="disease" placeholder="Disease">
+
+  <!-- Doctor Suggest -->
+  <div style="position:relative;">
+    <input id="doctor" placeholder="Doctor" onkeyup="suggestDoctors()">
+    <div id="doctorList" class="suggestions"></div>
+  </div>
+
+  <input id="date" type="date">
+
+  <button onclick="addAppointment()">Book</button>
+
+  <input id="search" placeholder="Search">
+  <button onclick="loadAppointments()">Search</button>
+</div>
+
+<table id="table"></table>
+<div id="noData" class="no-data"></div>
+
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } 
+from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+/* FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyCyCcNkmcZtcqH5GRwQuuq_3ZeRa5ZGPUs",
+  authDomain: "hospital-9deb3.firebaseapp.com",
+  projectId: "hospital-9deb3",
+  storageBucket: "hospital-9deb3.firebasestorage.app",
+  messagingSenderId: "372142613048",
+  appId: "1:372142613048:web:33b522fd28f629d525fccd",
+  measurementId: "G-1R912DHMW4"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* DOCTOR SUGGEST */
+window.suggestDoctors = async function(){
+  let input = document.getElementById("doctor").value.toLowerCase();
+  let box = document.getElementById("doctorList");
+
+  box.innerHTML = "";
+  if(input === "") return;
+
+  const snapshot = await getDocs(collection(db,"doctors"));
+
+  snapshot.forEach(docSnap => {
+    let d = docSnap.data();
+    if(d.name.toLowerCase().includes(input)){
+      let div = document.createElement("div");
+      div.innerText = d.name;
+
+      div.onclick = () => {
+        document.getElementById("doctor").value = d.name;
+        box.innerHTML = "";
+      };
+
+      box.appendChild(div);
+    }
+  });
+};
+
+/* ADD */
+window.addAppointment = async function(){
+  let name = val('name');
+  let age = val('age');
+  let gender = val('gender');
+  let disease = val('disease');
+  let doctor = val('doctor');
+  let date = val('date');
+
+  if(!name || !age || !gender || !disease || !doctor || !date){
+    alert("Fill all fields");
+    return;
+  }
+
+  await addDoc(collection(db,"appointments"),{
+    name, age, gender, disease, doctor, date
+  });
+
+  clearAll();
+  alert("Appointment booked");
+
+  loadAppointments(true);
+};
+
+/* 🔥 SEARCH FIX */
+window.loadAppointments = async function(showAll=false){
+
+  let search = val('search').toLowerCase();
+  let t = document.getElementById('table');
+  let noData = document.getElementById('noData');
+
+  t.innerHTML='<tr><th>Name</th><th>Doctor</th><th>Date</th><th>Action</th></tr>';
+
+  const snapshot = await getDocs(collection(db,"appointments"));
+
+  let found=false;
+
+  snapshot.forEach(docSnap=>{
+    let a=docSnap.data();
+    let name = (a.name || "").toLowerCase();
+
+    if(showAll || search === "" || name.includes(search)){
+      found=true;
+
+      t.innerHTML+=`
+      <tr>
+        <td>${a.name}</td>
+        <td>${a.doctor}</td>
+        <td>${a.date}</td>
+        <td><button onclick="deleteAppointment('${docSnap.id}')">Delete</button></td>
+      </tr>`;
+    }
+  });
+
+  noData.innerText = found ? "" : "No record found";
+};
+
+/* DELETE */
+window.deleteAppointment = async function(id){
+  await deleteDoc(doc(db,"appointments",id));
+  setVal('search','');
+  loadAppointments(true);
+};
+
+/* UTILS */
+function val(id){return document.getElementById(id).value;}
+function setVal(id,v){document.getElementById(id).value=v;}
+
+function clearAll(){
+  setVal('name',''); setVal('age',''); setVal('gender','');
+  setVal('disease',''); setVal('doctor',''); setVal('date','');
+  setVal('search','');
+}
+
+/* INIT */
+loadAppointments(true);
+
+</script>
+
+</body>
+</html>

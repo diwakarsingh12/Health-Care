@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Doctors</title>
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family: Arial;
+  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+}
+
+.container { width:95%; max-width:1100px; }
+
+.card {
+  backdrop-filter: blur(12px);
+  background: rgba(255,255,255,0.08);
+  padding:25px;
+  border-radius:20px;
+}
+
+.row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+  margin-bottom:15px;
+}
+
+.row input {
+  width:150px;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+}
+
+button {
+  padding:10px 15px;
+  border:none;
+  border-radius:10px;
+  background: rgba(255,255,255,0.1);
+  color:white;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+button:hover {
+  transform:translateY(-3px) scale(1.05);
+  background: rgba(255,255,255,0.2);
+}
+
+table {
+  width:100%;
+  margin-top:15px;
+  border-collapse:collapse;
+}
+
+th, td {
+  padding:10px;
+  border-bottom:1px solid rgba(255,255,255,0.2);
+  text-align:center;
+}
+
+.no-data {
+  text-align:center;
+  margin-top:15px;
+  font-size:18px;
+}
+
+h2 { text-align:center; margin-bottom:15px; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>Doctor Management</h2>
+
+<div class="card">
+
+<div class="row">
+  <input id="name" placeholder="Doctor Name">
+  <input id="spec" placeholder="Specialization">
+  <input id="contact" placeholder="Contact No">
+
+  <button onclick="addDoctor()">Add</button>
+
+  <input id="search" placeholder="Search">
+  <button onclick="loadDoctors()">Search</button>
+</div>
+
+<table id="table"></table>
+<div id="noData" class="no-data"></div>
+
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } 
+from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+/* FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyCyCcNkmcZtcqH5GRwQuuq_3ZeRa5ZGPUs",
+  authDomain: "hospital-9deb3.firebaseapp.com",
+  projectId: "hospital-9deb3",
+  storageBucket: "hospital-9deb3.firebasestorage.app",
+  messagingSenderId: "372142613048",
+  appId: "1:372142613048:web:33b522fd28f629d525fccd",
+  measurementId: "G-1R912DHMW4"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* ADD DOCTOR */
+window.addDoctor = async function(){
+
+  let name = val('name');
+  let spec = val('spec');
+  let contact = val('contact');
+
+  if(!name || !spec || !contact){
+    alert("Fill all fields");
+    return;
+  }
+
+  try {
+    await addDoc(collection(db,"doctors"),{
+      name, spec, contact
+    });
+
+    setVal('name','');
+    setVal('spec','');
+    setVal('contact','');
+    setVal('search','');
+
+    alert("Doctor added successfully");
+
+    loadDoctors(true);
+
+  } catch(err){
+    console.error(err);
+    alert("Error adding doctor");
+  }
+};
+
+
+window.loadDoctors = async function(showAll = false){
+
+  let search = document.getElementById('search').value.trim().toLowerCase();
+  let table = document.getElementById('table');
+  let noData = document.getElementById('noData');
+
+  table.innerHTML = '<tr><th>Name</th><th>Specialization</th><th>Contact</th><th>Action</th></tr>';
+
+  const snapshot = await getDocs(collection(db,"doctors"));
+
+  let found = false;
+
+  snapshot.forEach(docSnap => {
+
+    let d = docSnap.data();
+    let name = (d.name || "").toLowerCase();
+
+    if(showAll){
+      found = true;
+    }
+    else if(search === ""){
+      found = true;
+    }
+    else if(name.includes(search)){
+      found = true;
+    }
+    else{
+      return;
+    }
+
+    table.innerHTML += `
+    <tr>
+      <td>${d.name}</td>
+      <td>${d.spec}</td>
+      <td>${d.contact}</td>
+      <td><button onclick="deleteDoctor('${docSnap.id}')">Delete</button></td>
+    </tr>`;
+  });
+
+  noData.innerText = found ? "" : "No record found";
+};
+
+/* DELETE */
+window.deleteDoctor = async function(id){
+
+  if(!confirm("Delete doctor?")) return;
+
+  await deleteDoc(doc(db,"doctors",id));
+
+  document.getElementById('search').value = "";
+
+  loadDoctors(true);
+};
+
+/* UTILS */
+function val(id){ return document.getElementById(id).value; }
+function setVal(id,v){ document.getElementById(id).value = v; }
+
+/* INIT */
+loadDoctors(true);
+
+</script>
+
+</body>
+</html>

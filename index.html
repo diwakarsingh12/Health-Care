@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Health Dashboard</title>
+
+<style>
+* {
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body {
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family: Arial;
+  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+}
+
+.container {
+  width:100%;
+  max-width:1000px;
+  text-align:center;
+}
+
+/* GRID */
+.grid {
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:20px;
+  margin-top:30px;
+}
+
+/* CARD */
+.card {
+  padding:30px;
+  border-radius:20px;
+  backdrop-filter: blur(12px);
+  background: rgba(255,255,255,0.08);
+  cursor:pointer;
+  transition:0.3s;
+  font-weight:bold;
+}
+
+.card:hover {
+  transform:scale(1.08);
+  background: rgba(255,255,255,0.2);
+}
+
+/* BMI MODAL */
+#bmiModal {
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.6);
+  justify-content:center;
+  align-items:center;
+}
+
+.modal-box {
+  background:#1e2a38;
+  padding:25px;
+  border-radius:15px;
+}
+
+input, select {
+  padding:10px;
+  margin:5px;
+  border:none;
+  border-radius:8px;
+}
+
+button {
+  padding:10px 15px;
+  margin:5px;
+  border:none;
+  border-radius:8px;
+  background:#ffffff22;
+  color:white;
+  cursor:pointer;
+}
+
+button:hover {
+  background:#ffffff44;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Health care Management System</h1>
+
+<div class="grid">
+  <div class="card" onclick="go('patients.html')">Patients</div>
+  <div class="card" onclick="go('doctors.html')">Doctors</div>
+  <div class="card" onclick="go('appointments.html')">Appointments</div>
+  <div class="card" onclick="openBMI()">BMI Calculator</div>
+</div>
+
+</div>
+
+<!-- BMI POPUP -->
+<div id="bmiModal">
+  <div class="modal-box">
+
+    <h3>BMI Calculator</h3>
+
+    <select id="unit">
+      <option value="cm">CM</option>
+      <option value="feet">Feet</option>
+    </select>
+
+    <br>
+
+    <input id="weight" placeholder="Weight (kg)">
+    <input id="height" placeholder="Height">
+
+    <br>
+
+    <button onclick="calculateBMI()">Calculate</button>
+    <button onclick="closeBMI()">Close</button>
+
+    <p id="bmiResult"></p>
+
+  </div>
+</div>
+
+<script>
+
+/* NAVIGATION */
+function go(page){
+  window.location.href = page;
+}
+
+/* BMI OPEN */
+function openBMI(){
+  document.getElementById("bmiModal").style.display = "flex";
+}
+
+/* BMI CLOSE */
+function closeBMI(){
+  document.getElementById("bmiModal").style.display = "none";
+}
+
+/* BMI CALC */
+function calculateBMI(){
+
+  let w = parseFloat(document.getElementById("weight").value);
+  let h = parseFloat(document.getElementById("height").value);
+  let u = document.getElementById("unit").value;
+
+  if(!w || !h){
+    alert("Enter weight & height");
+    return;
+  }
+
+  if(u === "cm"){
+    h = h / 100;
+  } else {
+    h = h * 0.3048;
+  }
+
+  let bmi = (w / (h*h)).toFixed(2);
+
+  let status = "";
+  if(bmi < 18.5) status = "Underweight";
+  else if(bmi < 25) status = "Normal";
+  else status = "Overweight";
+
+  document.getElementById("bmiResult").innerText =
+    "BMI: " + bmi + " (" + status + ")";
+}
+
+</script>
+
+</body>
+</html>

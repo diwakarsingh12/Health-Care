@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Patients</title>
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family: Arial;
+  background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+  color:white;
+}
+
+.container { width:95%; max-width:1100px; }
+
+.card {
+  backdrop-filter: blur(12px);
+  background: rgba(255,255,255,0.08);
+  padding:25px;
+  border-radius:20px;
+}
+
+.row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+  margin-bottom:15px;
+}
+
+.row input, select {
+  width:140px;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+}
+
+button {
+  padding:10px 15px;
+  border:none;
+  border-radius:10px;
+  background: rgba(255,255,255,0.1);
+  color:white;
+  cursor:pointer;
+}
+
+table {
+  width:100%;
+  margin-top:15px;
+  border-collapse:collapse;
+}
+
+th, td {
+  padding:10px;
+  border-bottom:1px solid rgba(255,255,255,0.2);
+  text-align:center;
+}
+
+.no-data {
+  text-align:center;
+  margin-top:15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>Patient Management</h2>
+
+<div class="card">
+
+<div class="row">
+  <input id="name" placeholder="Name">
+  <input id="age" type="number" placeholder="Age">
+  <input id="disease" placeholder="Disease">
+  <input id="contact" placeholder="Contact No">
+
+  <select id="gender">
+    <option value="">Gender</option>
+    <option>Male</option>
+    <option>Female</option>
+  </select>
+
+  <button onclick="addPatient()">Add</button>
+
+  <input id="search" placeholder="Search">
+  <button onclick="loadPatients()">Search</button>
+</div>
+
+<table id="table"></table>
+<div id="noData" class="no-data"></div>
+
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } 
+from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+/* FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyCyCcNkmcZtcqH5GRwQuuq_3ZeRa5ZGPUs",
+  authDomain: "hospital-9deb3.firebaseapp.com",
+  projectId: "hospital-9deb3",
+  storageBucket: "hospital-9deb3.firebasestorage.app",
+  messagingSenderId: "372142613048",
+  appId: "1:372142613048:web:33b522fd28f629d525fccd",
+  measurementId: "G-1R912DHMW4"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* ADD PATIENT */
+window.addPatient = async function(){
+
+  let name = val('name');
+  let age = val('age');
+  let disease = val('disease');
+  let contact = val('contact');
+  let gender = val('gender');
+
+  if(!name || !age || !disease || !contact || !gender){
+    alert("Fill all fields");
+    return;
+  }
+
+  let doctorName = "Not Assigned";
+
+  const doctorsSnap = await getDocs(collection(db,"doctors"));
+
+  for (const d of doctorsSnap.docs) {
+    let docData = d.data();
+    let spec = docData.spec.toLowerCase();
+    let dis = disease.toLowerCase();
+
+    if(spec.includes(dis) || dis.includes(spec)){
+      doctorName = docData.name;
+      break;
+    }
+  }
+
+  await addDoc(collection(db,"patients"),{
+    name, age, disease, contact, gender, doctor: doctorName
+  });
+
+  clearAll();
+
+  // 🔥 SMART ALERT
+  if(doctorName === "Not Assigned"){
+    alert("Patient added successfully.\nDoctor not assigned.");
+  } else {
+    alert(`Patient added.\nDoctor assigned: ${doctorName}`);
+  }
+
+  loadPatients(true);
+};
+
+/* LOAD + SEARCH */
+window.loadPatients = async function(showAll = false){
+
+  const search = document.getElementById('search').value.trim().toLowerCase();
+  const table = document.getElementById('table');
+  const noData = document.getElementById('noData');
+
+  table.innerHTML = '<tr><th>Name</th><th>Age</th><th>Gender</th><th>Disease</th><th>Contact</th><th>Doctor</th><th>Action</th></tr>';
+
+  const snapshot = await getDocs(collection(db,"patients"));
+
+  let found = false;
+
+  snapshot.forEach(docSnap => {
+
+    const p = docSnap.data();
+    const name = (p.name || "").toLowerCase();
+
+    if(showAll){
+      found = true;
+    }
+    else if(search === ""){
+      found = true;
+    }
+    else if(name.includes(search)){
+      found = true;
+    }
+    else{
+      return;
+    }
+
+    table.innerHTML += `
+    <tr>
+      <td>${p.name}</td>
+      <td>${p.age}</td>
+      <td>${p.gender}</td>
+      <td>${p.disease}</td>
+      <td>${p.contact}</td>
+      <td>${p.doctor}</td>
+      <td><button onclick="deletePatient('${docSnap.id}')">Delete</button></td>
+    </tr>`;
+  });
+
+  noData.innerText = found ? "" : "No record found";
+};
+
+/* DELETE */
+window.deletePatient = async function(id){
+  if(!confirm("Delete this patient?")) return;
+
+  await deleteDoc(doc(db,"patients",id));
+  document.getElementById('search').value = "";
+  loadPatients(true);
+};
+
+/* UTILS */
+function val(id){
+  return document.getElementById(id).value;
+}
+
+function clearAll(){
+  document.getElementById('name').value="";
+  document.getElementById('age').value="";
+  document.getElementById('disease').value="";
+  document.getElementById('contact').value="";
+  document.getElementById('gender').value="";
+  document.getElementById('search').value="";
+}
+
+/* INIT */
+loadPatients(true);
+
+</script>
+
+</body>
+</html>
